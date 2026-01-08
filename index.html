@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Portal</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Monetag Ad SDK -->
+    <!-- Note: Ye script external hai, make sure ad blocker off ho test karte waqt -->
+    <script src='//libtl.com/sdk.js' data-zone='10350119' data-sdk='show_10350119'></script>
+
+    <style>
+        /* Custom Background: Yellowish Pink Gradient */
+        body {
+            background: linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%); /* Fallback */
+            background: linear-gradient(to bottom right, #ffefba, #ffc8dd); /* Yellowish Pink */
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Glassmorphism Card Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Loader Animation */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1e3a8a; /* Navy Blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Hidden class helper */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 text-blue-900">
+
+    <!-- Main Container -->
+    <div class="glass-card rounded-2xl shadow-xl p-8 max-w-md w-full text-center relative overflow-hidden">
+        
+        <!-- Status Icon / Header -->
+        <div class="mb-6">
+            <div class="w-20 h-20 bg-blue-900 text-white rounded-full flex items-center justify-center mx-auto shadow-lg mb-4">
+                <i class="fas fa-shield-alt text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-2">Security Check</h1>
+            <p class="text-sm font-medium opacity-80">Please complete the verification to access your content.</p>
+        </div>
+
+        <!-- Dynamic Content Area -->
+        <div id="action-area">
+            <!-- Loading State (Initially Visible) -->
+            <div id="loading-state">
+                <div class="loader mb-4"></div>
+                <p class="text-sm font-semibold animate-pulse">Initializing verification...</p>
+            </div>
+
+            <!-- Manual Trigger Button (Fallback if auto-ad fails) -->
+            <div id="manual-trigger" class="hidden">
+                <p class="text-sm mb-4 text-red-700 font-semibold bg-red-100 p-2 rounded">
+                    <i class="fas fa-exclamation-circle"></i> Verification requires interaction
+                </p>
+                <button onclick="triggerAd()" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md flex items-center justify-center gap-2">
+                    <i class="fas fa-play-circle"></i> Verify & Continue
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-xs opacity-60">
+            <p>Protected by Monetag Gate</p>
+            <p id="payload-display" class="mt-1 font-mono text-[10px] hidden"></p>
+        </div>
+    </div>
+
+    <!-- Success Modal (Hidden by default) -->
+    <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden transition-opacity duration-300">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-[90%] mx-4 text-center shadow-2xl transform scale-100 transition-transform duration-300">
+            <div class="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-3xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Success!</h2>
+            <p class="text-gray-600 mb-4">Videos has been sent successfully! Closing webapp...</p>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                <div class="bg-green-500 h-1.5 rounded-full" style="width: 100%"></div>
+            </div>
+            <p class="text-xs text-gray-400">Redirecting to Telegram...</p>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const DEFAULT_PAYLOAD = "059febb06ec34cfc9c0be"; // Jo tumne sample diya
+        const BASE_REDIRECT_URL = "https://t.me/Echelon_Heaven_Hub_bot";
+        
+        // --- State Management ---
+        let payload = "";
+        let finalUrl = "";
+
+        // --- Core Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // 1. URL se Payload extract karna
+            const urlParams = new URLSearchParams(window.location.search);
+            const startParam = urlParams.get('start');
+
+            // 2. Payload set karna (Logic: URL Param > Default)
+            if (startParam) {
+                payload = startParam;
+            } else {
+                console.log("No payload found, using default sample.");
+                payload = DEFAULT_PAYLOAD;
+            }
+
+            // 3. Final URL create karna
+            finalUrl = `${BASE_REDIRECT_URL}?start=${payload}`;
+            
+            // Debugging ke liye (Optional)
+            document.getElementById('payload-display').innerText = `ID: ${payload}`;
+
+            // 4. Ad Load karne ki koshish (Auto)
+            // Thoda delay dete hain taaki page fully render ho jaye
+            setTimeout(() => {
+                attemptAutoAd();
+            }, 1000);
+        });
+
+        // --- Ad Trigger Function ---
+        function attemptAutoAd() {
+            // Check karte hain ki Monetag function exist karta hai ya nahi
+            if (typeof show_10350119 === 'function') {
+                console.log("SDK loaded, attempting to show ad...");
+                
+                // Monetag Function Call
+                show_10350119().then(() => {
+                    // Ad Success / Ad Closed
+                    console.log("Ad watched or closed.");
+                    handleSuccess();
+                }).catch(err => {
+                    // Agar ad fail ho jaye (e.g. adblocker ya no fill)
+                    console.error("Ad failed or skipped:", err);
+                    // Fallback: Button dikhao taaki user manually click kare
+                    showManualButton();
+                });
+            } else {
+                console.error("Monetag SDK not found. Check internet or AdBlocker.");
+                // Agar script load nahi hui (Adblocker), tab bhi button dikhao
+                // Button click par bhi try karenge, maybe script late load ho
+                showManualButton();
+            }
+        }
+
+        // --- Manual Trigger (Button Click) ---
+        function triggerAd() {
+            const btn = document.querySelector('#manual-trigger button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            btn.disabled = true;
+
+            if (typeof show_10350119 === 'function') {
+                show_10350119().then(() => {
+                    handleSuccess();
+                }).catch(e => {
+                    // Agar ad load nahi hua, toh seedha redirect kar do (Fallback)
+                    console.log("Ad error, redirecting anyway...");
+                    handleSuccess(); 
+                });
+            } else {
+                alert("Ad verification failed. Redirecting manually...");
+                handleSuccess();
+            }
+        }
+
+        // --- UI Helpers ---
+        function showManualButton() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('manual-trigger').classList.remove('hidden');
+        }
+
+        // --- Success & Redirect Flow ---
+        function handleSuccess() {
+            // Loader ya Button chupao
+            document.getElementById('action-area').classList.add('hidden');
+            
+            // Success Modal dikhao
+            const modal = document.getElementById('success-modal');
+            modal.classList.remove('hidden');
+            
+            // Thoda wait karke redirect karo taaki user message padh sake
+            setTimeout(() => {
+                // Redirect logic
+                window.location.href = finalUrl;
+            }, 2500); // 2.5 seconds delay
+        }
+
+    </script>
+</body>
+</html>
